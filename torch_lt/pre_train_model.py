@@ -25,8 +25,6 @@ def preprocess_smiles(smiles):
     return AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=1024)
 
 
-# Convert SMILES to tensor
-
 
 class SmilesPreTrainDataset(Dataset):
     def __init__(self, data_path):
@@ -48,7 +46,7 @@ class SmilesPreTrainDataset(Dataset):
 # Experiment parameters
 vocab_size = 1024
 embedding_dim = 256
-hidden_dim = 512
+hidden_dim = 64
 num_heads = 8
 num_layers_gru = 2
 num_layers_transformer = 1
@@ -58,7 +56,7 @@ learning_rate = 1e-3
 num_epochs = 10
 
 # Data preparation (assuming you have train_data, val_data, and test_data ready)
-train_data = SmilesPreTrainDataset("data/train.csv")
+train_data = SmilesPreTrainDataset("data/pre_train.csv")
 
 
 data_module = ModelDataModule(train_data,batch_size)

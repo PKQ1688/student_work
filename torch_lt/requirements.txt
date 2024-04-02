@@ -1,0 +1,4 @@
+rdkit
+lightning
+pandas
+scikit-learn
