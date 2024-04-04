@@ -60,6 +60,7 @@ pipeline = Pipeline(stages=[labelIndexer, featureIndexer, rf])
 
 # Train the model
 model = pipeline.fit(trainingData)
+model.save("rf_model")
 
 # Make predictions.
 predictions = model.transform(testData)
