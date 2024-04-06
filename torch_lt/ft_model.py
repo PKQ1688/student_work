@@ -38,7 +38,7 @@ val_dataloader = torch.utils.data.DataLoader(
 
 # Training and evaluation
 # trainer.fit(gru_model,data_loader)
-trainer_transformer.fit(transformer_model,dataloader, val_dataloaders=dataloader)
+trainer_transformer.fit(transformer_model,dataloader, val_dataloaders=val_dataloader)
 # trainer_transformer.validate(transformer_model, val_dataloader)
 
 

@@ -1,4 +1,122 @@
-rdkit
-lightning
-pandas
-scikit-learn
+aiohttp==3.9.3
+aiosignal==1.3.1
+altair==5.3.0
+asttokens @ file:///opt/conda/conda-bld/asttokens_1646925590279/work
+attrs==23.2.0
+blinker==1.7.0
+cachetools==5.3.3
+camelot-py==0.9.0
+certifi==2024.2.2
+cffi==1.16.0
+chardet==5.2.0
+charset-normalizer==3.3.2
+click==8.1.7
+comm @ file:///croot/comm_1709322850197/work
+contourpy==1.2.0
+cryptography==42.0.5
+cycler==0.12.1
+debugpy @ file:///croot/debugpy_1690905042057/work
+decorator @ file:///opt/conda/conda-bld/decorator_1643638310831/work
+et-xmlfile==1.1.0
+executing @ file:///opt/conda/conda-bld/executing_1646925071911/work
+filelock==3.13.3
+fonttools==4.50.0
+frozenlist==1.4.1
+fsspec==2024.3.1
+gitdb==4.0.11
+GitPython==3.1.43
+idna==3.6
+ipykernel @ file:///croot/ipykernel_1705933831282/work
+ipython @ file:///croot/ipython_1704833016303/work
+jedi @ file:///work/ci_py311_2/jedi_1679336495545/work
+Jinja2==3.1.3
+joblib==1.3.2
+jsonschema==4.21.1
+jsonschema-specifications==2023.12.1
+jupyter_client @ file:///croot/jupyter_client_1699455897726/work
+jupyter_core @ file:///croot/jupyter_core_1698937308754/work
+kiwisolver==1.4.5
+lightning==2.2.1
+lightning-utilities==0.11.2
+markdown-it-py==3.0.0
+MarkupSafe==2.1.5
+matplotlib==3.8.3
+matplotlib-inline @ file:///work/ci_py311/matplotlib-inline_1676823841154/work
+mdurl==0.1.2
+mpmath==1.3.0
+multidict==6.0.5
+nest-asyncio @ file:///croot/nest-asyncio_1708532673751/work
+networkx==3.2.1
+numpy==1.26.4
+nvidia-cublas-cu12==12.1.3.1
+nvidia-cuda-cupti-cu12==12.1.105
+nvidia-cuda-nvrtc-cu12==12.1.105
+nvidia-cuda-runtime-cu12==12.1.105
+nvidia-cudnn-cu12==8.9.2.26
+nvidia-cufft-cu12==11.0.2.54
+nvidia-curand-cu12==10.3.2.106
+nvidia-cusolver-cu12==11.4.5.107
+nvidia-cusparse-cu12==12.1.0.106
+nvidia-nccl-cu12==2.19.3
+nvidia-nvjitlink-cu12==12.4.99
+nvidia-nvtx-cu12==12.1.105
+opencv-python==4.9.0.80
+openpyxl==3.1.2
+packaging @ file:///croot/packaging_1710807400464/work
+pandas==2.2.1
+parso @ file:///opt/conda/conda-bld/parso_1641458642106/work
+pdfminer.six==20231228
+pexpect @ file:///tmp/build/80754af9/pexpect_1605563209008/work
+pillow==10.2.0
+platformdirs @ file:///croot/platformdirs_1692205439124/work
+prompt-toolkit @ file:///croot/prompt-toolkit_1704404351921/work
+protobuf==4.25.3
+psutil @ file:///work/ci_py311_2/psutil_1679337388738/work
+ptyprocess @ file:///tmp/build/80754af9/ptyprocess_1609355006118/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl
+pure-eval @ file:///opt/conda/conda-bld/pure_eval_1646925070566/work
+py4j==0.10.9.7
+pyarrow==15.0.2
+pycparser==2.22
+pydeck==0.8.1b0
+Pygments @ file:///croot/pygments_1684279966437/work
+PyMuPDF==1.24.1
+PyMuPDFb==1.24.1
+pyparsing==3.1.2
+pypdf==4.1.0
+PyPDF2==3.0.1
+pyspark==3.5.1
+python-dateutil @ file:///tmp/build/80754af9/python-dateutil_1626374649649/work
+pytorch-lightning==2.2.1
+pytz==2024.1
+PyYAML==6.0.1
+pyzmq @ file:///croot/pyzmq_1705605076900/work
+rdkit==2023.9.5
+referencing==0.34.0
+requests==2.31.0
+rich==13.7.1
+rpds-py==0.18.0
+scikit-learn==1.4.1.post1
+scipy==1.12.0
+seaborn==0.13.2
+six @ file:///tmp/build/80754af9/six_1644875935023/work
+smmap==5.0.1
+stack-data @ file:///opt/conda/conda-bld/stack_data_1646927590127/work
+streamlit==1.33.0
+sympy==1.12
+tenacity==8.2.3
+threadpoolctl==3.4.0
+toml==0.10.2
+toolz==0.12.1
+torch==2.2.2
+torchmetrics==1.3.2
+tornado @ file:///croot/tornado_1696936946304/work
+tqdm==4.66.2
+traitlets @ file:///work/ci_py311/traitlets_1676823305040/work
+triton==2.2.0
+typing_extensions==4.10.0
+tzdata==2024.1
+urllib3==2.2.1
+watchdog==4.0.0
+wcwidth @ file:///Users/ktietz/demo/mc3/conda-bld/wcwidth_1629357192024/work
+xgboost==2.0.3
+yarl==1.9.4
