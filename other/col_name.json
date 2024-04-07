@@ -1,0 +1,234 @@
+[
+    {
+        "name": "lo_orderkey",
+        "type": "bigint"
+    },
+    {
+        "name": "o_linenumber",
+        "type": "bigint"
+    },
+    {
+        "name": "o_custkey",
+        "type": "int"
+    },
+    {
+        "name": "o_partkey",
+        "type": "int"
+    },
+    {
+        "name": "o_suppkey",
+        "type": "int"
+    },
+    {
+        "name": "o_orderdate",
+        "type": "int"
+    },
+    {
+        "name": "o_orderpriotity",
+        "type": "string"
+    },
+    {
+        "name": "o_shippriotity",
+        "type": "int"
+    },
+    {
+        "name": "o_quantity",
+        "type": "bigint"
+    },
+    {
+        "name": "o_extendedprice",
+        "type": "bigint"
+    },
+    {
+        "name": "o_ordtotalprice",
+        "type": "bigint"
+    },
+    {
+        "name": "o_discount",
+        "type": "bigint"
+    },
+    {
+        "name": "lo_revenue",
+        "type": "bigint"
+    },
+    {
+        "name": "lo_supplycost",
+        "type": "bigint"
+    },
+    {
+        "name": "lo_tax",
+        "type": "bigint"
+    },
+    {
+        "name": "lo_commitdate",
+        "type": "int"
+    },
+    {
+        "name": "lo_shipmode",
+        "type": "string"
+    },
+    {
+        "name": "d_datekey",
+        "type": "int"
+    },
+    {
+        "name": "d_date",
+        "type": "string"
+    },
+    {
+        "name": "d_dayofweek",
+        "type": "string"
+    },
+    {
+        "name": "d_month",
+        "type": "string"
+    },
+    {
+        "name": "d_year",
+        "type": "int"
+    },
+    {
+        "name": "d_yearmonthnum",
+        "type": "int"
+    },
+    {
+        "name": "d_yearmonth",
+        "type": "string"
+    },
+    {
+        "name": "d_daynuminweek",
+        "type": "int"
+    },
+    {
+        "name": "d_daynuminmonth",
+        "type": "int"
+    },
+    {
+        "name": "d_daynuminyear",
+        "type": "int"
+    },
+    {
+        "name": "d_monthnuminyear",
+        "type": "int"
+    },
+    {
+        "name": "d_weeknuminyear",
+        "type": "int"
+    },
+    {
+        "name": "d_sellingseason",
+        "type": "string"
+    },
+    {
+        "name": "d_lastdayinweekfl",
+        "type": "int"
+    },
+    {
+        "name": "d_lastdayinmonthfl",
+        "type": "int"
+    },
+    {
+        "name": "d_holidayfl",
+        "type": "int"
+    },
+    {
+        "name": "d_weekdayfl",
+        "type": "int"
+    },
+    {
+        "name": "c_custkey",
+        "type": "int"
+    },
+    {
+        "name": "c_name",
+        "type": "string"
+    },
+    {
+        "name": "c_address",
+        "type": "string"
+    },
+    {
+        "name": "c_city",
+        "type": "string"
+    },
+    {
+        "name": "c_nation",
+        "type": "string"
+    },
+    {
+        "name": "c_region",
+        "type": "string"
+    },
+    {
+        "name": "c_phone",
+        "type": "string"
+    },
+    {
+        "name": "c_mktsegment",
+        "type": "string"
+    },
+    {
+        "name": "s_suppkey",
+        "type": "int"
+    },
+    {
+        "name": "s_name",
+        "type": "string"
+    },
+    {
+        "name": "s_address",
+        "type": "string"
+    },
+    {
+        "name": "s_city",
+        "type": "string"
+    },
+    {
+        "name": "s_nation",
+        "type": "string"
+    },
+    {
+        "name": "s_region",
+        "type": "string"
+    },
+    {
+        "name": "s_phone",
+        "type": "string"
+    },
+    {
+        "name": "p_partkey",
+        "type": "int"
+    },
+    {
+        "name": "p_name",
+        "type": "string"
+    },
+    {
+        "name": "p_mfgr",
+        "type": "string"
+    },
+    {
+        "name": "p_category",
+        "type": "string"
+    },
+    {
+        "name": "p_brand",
+        "type": "string"
+    },
+    {
+        "name": "p_color",
+        "type": "string"
+    },
+    {
+        "name": "p_type",
+        "type": "string"
+    },
+    {
+        "name": "p_size",
+        "type": "int"
+    },
+    {
+        "name": "p_container",
+        "type": "string"
+    }
+]

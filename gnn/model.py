@@ -103,11 +103,11 @@ class CustomGNNLightning(pl.LightningModule):
         return optimizer
 
 
-# 假设 `raw_data` 是包含所有样本数据的列表
-dataset = CustomDataset(data_list_path="data_list.pt")
-loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=custom_collate)
+if __name__ == '__main__':
+    dataset = CustomDataset(data_list_path="data_list.pt")
+    loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=custom_collate)
 
-model = CustomGNNLightning()
-trainer = pl.Trainer(max_epochs=5, logger=True)
+    model = CustomGNNLightning()
+    trainer = pl.Trainer(max_epochs=5, logger=True)
 
-trainer.fit(model, loader)
+    trainer.fit(model, loader)

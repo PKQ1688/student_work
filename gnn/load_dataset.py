@@ -145,9 +145,9 @@ def save_train_data_list():
         output_s = output[(i * 3):(i * 3 + 24), (i * 3):(i * 3 + 24)]
 
         input_s = torch.cat((x_s, y_s), dim=0)
-        print("input_s:", input_s.shape)
-        print("output_s:", output_s.shape)
-        print("edge_index:", edge_index.shape)
+        print("input_s:", input_s.shape)  # torch.Size([32, 7, 7])
+        print("output_s:", output_s.shape)  # torch.Size([24, 24])
+        print("edge_index:", edge_index.shape)  # torch.Size([2, 49])
         data = Data(x=input_s, y=output_s, edge_index=edge_index)
         data_list.append(data)
         # break
