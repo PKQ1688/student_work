@@ -19,20 +19,28 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader
 
 from sklearn.model_selection import train_test_split
+from torchmetrics import (
+    Accuracy,
+    Recall,
+    AUROC,
+    PrecisionRecallCurve,
+    Precision,
+    F1Score,
+)
 from sklearn.metrics import (
     accuracy_score,
-    roc_auc_score,
-    f1_score,
     recall_score,
-    precision_recall_curve,
-    auc,
+    roc_auc_score,
+    average_precision_score,
 )
+
+# from torchmetrics.classification import MulticlassROC, MulticlassPrecisionRecallCurve
 
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class BaseModel(pl.LightningModule):
-    def __init__(self,is_pretrain=True):
+    def __init__(self, is_pretrain=True):
         super(BaseModel, self).__init__()
         # self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.encoder = None
@@ -41,11 +49,23 @@ class BaseModel(pl.LightningModule):
 
         self.is_pretrain = is_pretrain
 
+        # self.accuracy = Accuracy(num_classes=12, task="multiclass")
+        # self.recall = Recall(num_classes=12, average="weighted", task="multiclass")
+        # self.auc = AUROC(num_classes=12, task="multiclass")
+        # self.prc_auc = PrecisionRecallCurve(num_classes=12, task="multiclass")
+
+        self.accuracy = Accuracy(num_classes=12, task="multiclass", average="weighted")
+        self.precision = Precision(
+            num_classes=12, average="weighted", task="multiclass"
+        )
+        self.recall = Recall(num_classes=12, average="weighted", task="multiclass")
+        self.f1 = F1Score(num_classes=12, average="weighted", task="multiclass")
+
     def forward_pretrain(self, x):
         z = self.encoder(x)
         x_hat = self.decoder(z)
         return x_hat
-    
+
     def forward(self, x):
         x = self.encoder(x)
         x = self.fc(x)
@@ -66,37 +86,53 @@ class BaseModel(pl.LightningModule):
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
         return loss
-    
+
     def validation_step(self, batch, batch_idx):
-        x, labels = batch
-        # x = x.view(x.size(0), -1)
-        outputs = self.forward(x)
-        loss = nn.BCEWithLogitsLoss()(outputs, labels)
+        # 假设batch包含输入x和目标标签y
+        x, y = batch
 
-        preds = torch.sigmoid(outputs)
-        preds_binary = (preds > 0.5).float()
+        # 预测
+        y_pred = self(x)
+        y_pred_classes = y_pred.softmax(dim=1)
+        # y = y.view(-1)
+        # loss = nn.BCEWithLogitsLoss()(y_pred, y)
+        # 确保y和y_pred_classes都是非负整数且值在0到num_classes-1之间
+        # assert (y >= 0).all() and (y < 12).all()
+        # assert (y_pred_classes >= 0).all() and (y_pred_classes < 12).all()
+        # 更新评价指标
+        self.accuracy(y_pred_classes, y)
+        self.precision(y_pred_classes, y)
+        self.recall(y_pred_classes, y)
+        self.f1(y_pred_classes, y)
 
-        accuracy = accuracy_score(labels.cpu().numpy(), preds_binary.cpu().numpy())
-        recall = recall_score(
-            labels.cpu().numpy(), preds_binary.cpu().numpy(), average="micro"
-        )
-        precision, recall, _ = precision_recall_curve(
-            labels.cpu().numpy().ravel(), preds.cpu().detach().numpy().ravel()
-        )
-        # Logging to TensorBoard (if installed) by default
-        self.log("train_loss", loss)
-        self.log("accuracy", accuracy)
-        self.log("recall", recall.mean())
-        self.log("precision", precision.mean())
+    def on_validation_epoch_end(self):
+        # 计算整个验证集上的评价指标
+        accuracy = self.accuracy.compute()
+        precision = self.precision.compute()
+        recall = self.recall.compute()
+        f1 = self.f1.compute()
 
-        return loss
+        self.log("val_accuracy", accuracy, prog_bar=True, logger=True)
+        self.log("val_precision", precision, prog_bar=True, logger=True)
+        self.log("val_recall", recall, prog_bar=True, logger=True)
+        self.log("val_f1", f1, prog_bar=True, logger=True)
 
+        # 重置指标以备下一轮验证
+        self.accuracy.reset()
+        self.precision.reset()
+        self.recall.reset()
+        self.f1.reset()
+
+        return accuracy, precision, recall, f1
+    
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
 
 class GRUModel(BaseModel):
-    def __init__(self, input_size=1024, hidden_size=256, num_classes=12,is_pretrain=True):
+    def __init__(
+        self, input_size=1024, hidden_size=256, num_classes=12, is_pretrain=True
+    ):
         super().__init__(is_pretrain)
 
         self.input_size = input_size
@@ -108,7 +144,7 @@ class GRUModel(BaseModel):
         self.fc_out = nn.Linear(hidden_size, input_size)
 
         self.fc = nn.Linear(hidden_size, num_classes)
-    
+
     def forward(self, x):
         out, h = self.encoder(x)
         out = self.fc(out)
@@ -148,9 +184,7 @@ class TransformerModel(BaseModel):
             dim_feedforward=hidden_size,
             dropout=dropout,
         )
-        self.encoder = nn.TransformerEncoder(
-            self.encoder_layer, num_layers=num_layers
-        )
+        self.encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
 
         self.decoder = nn.Sequential(
             nn.Linear(input_size, hidden_size),
@@ -160,8 +194,11 @@ class TransformerModel(BaseModel):
 
         self.fc = nn.Linear(input_size, 12)
 
+
 class DNNSimpleModel(BaseModel):
-    def __init__(self, input_size=1024, hidden_size=256, output_size=1024,is_pretrain=True):
+    def __init__(
+        self, input_size=1024, hidden_size=256, output_size=1024, is_pretrain=True
+    ):
         super().__init__(is_pretrain)
         self.encoder = nn.Sequential(
             nn.Linear(input_size, hidden_size),
@@ -235,7 +272,7 @@ class ModelDataModule(pl.LightningDataModule):
 
 
 class SmilesTrainDataset(Dataset):
-    def __init__(self, data_path,is_train=True):
+    def __init__(self, data_path, is_train=True):
         self.data = pd.read_csv(data_path)
         feature_list = [
             "NR-AR",
@@ -251,19 +288,20 @@ class SmilesTrainDataset(Dataset):
             "SR-MMP",
             "SR-p53",
         ]
-        self.data.dropna(subset=feature_list,inplace=True)
+        self.data.dropna(subset=feature_list, inplace=True)
 
         self.data["SMILES"] = self.data["SMILES"].apply(preprocess_smiles)
 
         X = np.stack(self.data["SMILES"].values)
-        y = self.data[feature_list]   
+        y = self.data[feature_list]
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
 
-        #Split the data into training and testing sets
+        # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.1, random_state=42)   
-        
+            X, y, test_size=0.5, random_state=42
+        )
+
         # Convert SMILES to tensor
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
