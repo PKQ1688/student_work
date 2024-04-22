@@ -13,9 +13,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_geometric
 import torch_geometric.transforms as T
-from torch.utils.data import DataLoader
-from torch_geometric.data import Dataset, Batch
-
+from torch.utils.data import DataLoader,Dataset
+from torch_geometric.data import Batch
+# from torch_geometric.data import Dataset, Batch
 
 # path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 # dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
@@ -27,9 +27,13 @@ def custom_collate(batch):
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data_list_path):
+    def __init__(self, data_list_path, is_train=True):
         super().__init__()
         self.data_list = torch.load(data_list_path)
+        if is_train:
+            self.data_list = self.data_list[:int(len(self.data_list) * 0.8)]
+        else:
+            self.data_list = self.data_list[int(len(self.data_list) * 0.8):]
 
     def __len__(self):
         return len(self.data_list)
@@ -95,19 +99,31 @@ class CustomGNNLightning(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         y_hat = self(batch)
         loss = self.loss_fn(y_hat, batch.y)  # 假设 `batch.y` 存储真实标签（7x7 矩阵）
-        self.log('train_loss', loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        y_hat = self(batch)
+        loss = self.loss_fn(y_hat, batch.y)
+        self.log("val_loss", loss, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=0.001)
+        optimizer = optim.Adam(self.parameters(), lr=0.0001)
         return optimizer
 
 
-if __name__ == '__main__':
-    dataset = CustomDataset(data_list_path="data_list.pt")
-    loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=custom_collate)
+if __name__ == "__main__":
+    train_dataset = CustomDataset(data_list_path="data_list.pt", is_train=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=custom_collate
+    )
+    val_dataset = CustomDataset(data_list_path="data_list.pt", is_train=False)
+    val_loader = DataLoader(
+        val_dataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=custom_collate
+    )
 
     model = CustomGNNLightning()
     trainer = pl.Trainer(max_epochs=5, logger=True)
 
-    trainer.fit(model, loader)
+    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
