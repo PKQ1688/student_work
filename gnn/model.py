@@ -5,16 +5,29 @@
 # @Email        : adolf1321794021@gmail.com
 # @LastEditTime : 2024/4/6 16:03
 # @File         : model.py
+import os
+import random
 
 import lightning as pl
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_geometric
 import torch_geometric.transforms as T
-from torch.utils.data import DataLoader,Dataset
-from torch_geometric.data import Batch
+from torch.utils.data import Dataset
+from torch_geometric.data import Batch, Data
+from torch_geometric.loader import DataLoader
+from tqdm import tqdm
+from torchmetrics import (
+    Accuracy,
+    Recall,
+    Precision,
+    F1Score,
+)
+
 # from torch_geometric.data import Dataset, Batch
 
 # path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
@@ -27,13 +40,42 @@ def custom_collate(batch):
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data_list_path, is_train=True):
+    def __init__(self, is_train=True):
         super().__init__()
-        self.data_list = torch.load(data_list_path)
+
+        file_name_list = os.listdir("data_v2")
+        train_data_list = []
+        val_data_list = []
+
+        edge_index = torch.tensor(
+            [[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, 6, 7, 0]], dtype=torch.long
+        )
+        for file_name in file_name_list:
+            # print(file_name)
+            label = file_name.split("_")[0]
+            label = torch.tensor([int(label)], dtype=torch.long)
+            label = torch.nn.functional.one_hot(label, num_classes=5).float()
+
+            # print(label)
+            file_content = pd.read_csv(f"data_v2/{file_name}", header=None)
+            file_np = np.array(file_content.values, dtype=np.float32)
+            # print(file_np.shape)
+            for i in tqdm(range(file_np.shape[0])):
+            # for i in tqdm(range(1000)):
+                inputs = torch.tensor(file_np[i])
+                # print(inputs.shape)
+                inputs = inputs.unsqueeze(1)
+                data = Data(x=inputs, y=label, edge_index=edge_index)
+                if random.random() < 0.7:
+                    train_data_list.append(data)
+                else:
+                    val_data_list.append(data)
         if is_train:
-            self.data_list = self.data_list[:int(len(self.data_list) * 0.8)]
+            self.data_list = train_data_list
         else:
-            self.data_list = self.data_list[int(len(self.data_list) * 0.8):]
+            self.data_list = val_data_list
+
+        random.shuffle(self.data_list)
 
     def __len__(self):
         return len(self.data_list)
@@ -59,71 +101,134 @@ class CustomDataset(Dataset):
         # return out
 
 
-class CustomGNNModel(nn.Module):
-    def __init__(self, in_channels=224, out_channels=576):
-        super().__init__()
-        self.conv1 = torch_geometric.nn.GCNConv(in_channels, 64)  # 第一层 GNN 层
-        self.conv2 = torch_geometric.nn.GCNConv(64, 256)  # 第二层 GNN 层
-        self.fc_out = nn.Linear(7 * 256, out_channels)  # 输出层，将 512 维特征映射到 24*24 输出矩阵
+# class CustomGNNModel(nn.Module):
+#     def __init__(self, in_channels=8, out_channels=5):
+#         super().__init__()
+#         self.conv1 = torch_geometric.nn.GCNConv(in_channels, 64)  # 第一层 GNN 层
+#         self.conv2 = torch_geometric.nn.GCNConv(64, 256)  # 第二层 GNN 层
+#         self.fc_out = nn.Linear(256, out_channels)  # 输出层，将 512 维特征映射到 5 维度矩阵
+#
+#     def forward(self, data):
+#         x, edge_index = data.x, data.edge_index
+#
+#         x = self.conv1(x, edge_index)
+#         x = F.relu(x)
+#         x = F.dropout(x, training=self.training)
+#         x = self.conv2(x, edge_index)
+#         x = self.fc_out(x)
+#         # 将输出特征重塑为 (batch_size, 24, 24) 形状
+#         # x = x.view(-1, 24, 24)
+#         # x = x.squeeze()
+#         return x
+class GCN(torch.nn.Module):
+    def __init__(self, hidden_channels, in_channels, out_channels):
+        super(GCN, self).__init__()
+        torch.manual_seed(12345)
+        self.conv1 = torch_geometric.nn.GCNConv(in_channels, hidden_channels)
+        self.conv2 = torch_geometric.nn.GCNConv(hidden_channels, hidden_channels)
+        self.conv3 = torch_geometric.nn.GCNConv(hidden_channels, hidden_channels)
+        self.lin = nn.Linear(hidden_channels, out_channels)
 
     def forward(self, data):
-        x = data.x
-        edge_index = data.edge_index
-
-        x = x.view(-1, x.size(-1))
-        x = x.transpose(0, 1)
-
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        # 1. Obtain node embeddings
         x = self.conv1(x, edge_index)
-        x = F.relu(x)
+        x = x.relu()
         x = self.conv2(x, edge_index)
-        x = F.relu(x)
+        x = x.relu()
+        x = self.conv3(x, edge_index)
 
-        x = x.unsqueeze(0)
-        x = x.view(x.size(0), -1)
-        x = self.fc_out(x)
-        # 将输出特征重塑为 (batch_size, 24, 24) 形状
-        x = x.view(-1, 24, 24)
-        x = x.squeeze()
+        # 2. Readout layer
+        x = torch_geometric.nn.global_mean_pool(
+            x, batch
+        )  # [batch_size, hidden_channels]
+
+        # 3. Apply a final classifier
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.lin(x)
+        # x = F.softmax(x, dim=1)
+
         return x
 
 
 class CustomGNNLightning(pl.LightningModule):
-    def __init__(self, in_channels=224, out_channels=576):
+    def __init__(self, in_channels=1, out_channels=5, hidden_channels=64):
         super().__init__()
-        self.model = CustomGNNModel(in_channels=in_channels, out_channels=out_channels)
-        self.loss_fn = nn.MSELoss()
+        self.model = GCN(in_channels=in_channels, out_channels=out_channels, hidden_channels=hidden_channels)
+        # self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.CrossEntropyLoss()
+
+        self.accuracy = Accuracy(num_classes=5, task="multiclass", average="weighted")
+        self.precision = Precision(num_classes=5, average="weighted", task="multiclass")
+        self.recall = Recall(num_classes=5, average="weighted", task="multiclass")
+        self.f1 = F1Score(num_classes=5, average="weighted", task="multiclass")
 
     def forward(self, data):
         return self.model(data)
 
     def training_step(self, batch, batch_idx):
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, batch.y)  # 假设 `batch.y` 存储真实标签（7x7 矩阵）
-        self.log("train_loss", loss, prog_bar=True)
+        loss = self.loss_fn(y_hat, batch.y)
+        self.log("train_loss", loss, prog_bar=True, batch_size=64)
         return loss
 
     def validation_step(self, batch, batch_idx):
         y_hat = self(batch)
         loss = self.loss_fn(y_hat, batch.y)
-        self.log("val_loss", loss, prog_bar=True)
-        return loss
+        self.log("val_loss", loss, prog_bar=True, batch_size=64)
+
+        self.accuracy(y_hat, batch.y)
+        self.precision(y_hat, batch.y)
+        self.recall(y_hat, batch.y)
+        self.f1(y_hat, batch.y)
+
+    def on_validation_epoch_end(self):
+        # 计算整个验证集上的评价指标
+        accuracy = self.accuracy.compute()
+        precision = self.precision.compute()
+        recall = self.recall.compute()
+        f1 = self.f1.compute()
+
+        self.log("val_accuracy", accuracy, prog_bar=True, logger=True)
+        self.log("val_precision", precision, prog_bar=True, logger=True)
+        self.log("val_recall", recall, prog_bar=True, logger=True)
+        self.log("val_f1", f1, prog_bar=True, logger=True)
+
+        # 重置指标以备下一轮验证
+        self.accuracy.reset()
+        self.precision.reset()
+        self.recall.reset()
+        self.f1.reset()
+
+        return accuracy, precision, recall, f1
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=0.0001)
+        optimizer = optim.AdamW(self.parameters(), lr=0.0001)
         return optimizer
 
 
 if __name__ == "__main__":
-    train_dataset = CustomDataset(data_list_path="data_list_v2.pt", is_train=True)
+    train_dataset = CustomDataset(is_train=True)
     train_loader = DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=custom_collate
+        train_dataset,
+        batch_size=64,
+        shuffle=True,
+        num_workers=0,
+        collate_fn=custom_collate,
     )
-    val_dataset = CustomDataset(data_list_path="data_list_v2.pt", is_train=False)
+    val_dataset = CustomDataset(is_train=False)
     val_loader = DataLoader(
-        val_dataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=custom_collate
+        val_dataset,
+        batch_size=64,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=custom_collate,
     )
 
     model = CustomGNNLightning()
-    trainer = pl.Trainer(max_epochs=5, logger=True)
+    from lightning.pytorch.loggers import TensorBoardLogger
+
+    logger = TensorBoardLogger("tb_logs", name="gcn")
+    trainer = pl.Trainer(max_epochs=5, logger=logger)
 
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
