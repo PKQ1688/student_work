@@ -18,7 +18,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_geometric
 import torch_geometric.transforms as T
-from torch.utils.data import Dataset
+
+# from torch.utils.data import Dataset
+from torch_geometric.data import Dataset
 from torch_geometric.data import Batch, Data
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
@@ -30,43 +32,58 @@ from torchmetrics import (
 )
 from multiprocessing import Pool
 
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 # from torch_geometric.data import Dataset, Batch
 
 # path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 # dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
-batch_size = 1
+batch_size = 64
+
 
 def custom_collate(batch):
     batched_data = Batch.from_data_list(batch)
     return batched_data
 
-def process_file(file_name,data_list):
+
+def process_file(file_name, data_list):
     label = int(file_name.split("_")[0])
     label = torch.tensor([label], dtype=torch.long)
     label = torch.nn.functional.one_hot(label, num_classes=5).float()
-    
+
     file_content = pd.read_csv(os.path.join("data_v2", file_name), header=None)
     # file_np = file_content.values.astype(np.float32)
     file_np = np.array(file_content.values, dtype=np.float32)
-    
-    edge_index = torch.tensor([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, 6, 7, 0]], dtype=torch.long)
-    
+
+    edge_index = torch.tensor(
+        [[0, 1, 2, 3, 4, 5, 6, 7, 1, 2], [1, 2, 3, 4, 5, 6, 7, 0, 6, 5]],
+        dtype=torch.long,
+    )
+
     # data_list = []
     # for i in range(file_np.shape[0]):
     # file_tensors = torch.tensor(file_np).unsqueeze(1)  # 处理一次性转换
     # for i in tqdm(range(30000)):
     # for i in tqdm(range(file_np.shape[0])):
     #     inputs = torch.tensor(file_np[i]).unsqueeze(1)
-    for i in tqdm(range(0, file_np.shape[0], 1024)):
+    seq_length = 1024
+    for i in tqdm(range(0, file_np.shape[0], seq_length)):
         # 使用切片获取当前批次的数据
-        current_batch = file_np[i:i+1024]
-    
+        current_batch = file_np[i : i + seq_length]
+
         # 将 numpy 数组转换为 torch Tensor
         inputs = torch.tensor(current_batch)
+        # pdb.set_trace()
+        if inputs.size(0) < seq_length:
+            continue
+
+        inputs = inputs.permute(1, 0)
         data = Data(x=inputs, y=label, edge_index=edge_index)
         # if random.random() < 0.7 if is_train else True:  # Always true for validation to include all data
         data_list.append(data)
-    
+
     return data_list
 
 
@@ -83,7 +100,7 @@ class CustomDataset(Dataset):
 
         for file_name in file_name_list:
             print(file_name)
-            process_file(file_name,data_list)  # Warm up the function
+            process_file(file_name, data_list)  # Warm up the function
 
         random.shuffle(data_list)
         # Preparing training data
@@ -92,9 +109,11 @@ class CustomDataset(Dataset):
         # Preparing validation data (assuming we don't need to reprocess files for validation, just split differently)
         # If validation requires a separate processing or different files, adjust accordingly.
         if is_train:
-            self.data_list = data_list[:int(len(data_list) * 0.7)]  # Assuming we're in a class context, replace with appropriate variable if not
+            self.data_list = data_list[
+                : int(len(data_list) * 0.7)
+            ]  # Assuming we're in a class context, replace with appropriate variable if not
         else:
-            self.data_list = data_list[int(len(data_list) * 0.7):]
+            self.data_list = data_list[int(len(data_list) * 0.7) :]
         # file_name_list = os.listdir("data_v2")
         # train_data_list = []
         # val_data_list = []
@@ -134,7 +153,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         data = self.data_list[idx]
-        data = T.NormalizeFeatures()(data)
+        # data = T.NormalizeFeatures()(data)
         return data
         # # 假设 `data` 是一个包含节点特征、边信息等的字典
         # x = data.x  # 节点特征，形状应为 (num_nodes, 32, 7, 7)
@@ -183,11 +202,12 @@ class CustomGNNLightning(pl.LightningModule):
         self.lin = nn.Linear(hidden_channels, out_channels)
         # self.loss_fn = nn.MSELoss()
         self.loss_fn = nn.CrossEntropyLoss()
+        # self.loss_fn = nn.Loss()()
 
-        self.accuracy = Accuracy(num_classes=5, task="multiclass",average="macro")
-        self.precision = Precision(num_classes=5, task="multiclass",average="macro")
-        self.recall = Recall(num_classes=5, task="multiclass",average="macro")
-        self.f1 = F1Score(num_classes=5, task="multiclass",average="macro")
+        self.accuracy = Accuracy(num_classes=5, task="multiclass")
+        self.precision = Precision(num_classes=5, task="multiclass")
+        self.recall = Recall(num_classes=5, task="multiclass")
+        self.f1 = F1Score(num_classes=5, task="multiclass")
 
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
@@ -195,7 +215,7 @@ class CustomGNNLightning(pl.LightningModule):
 
         # import pdb
         # pdb.set_trace()
-        x = x.permute(1, 0)
+        # x = x.permute(1, 0)
         x = self.conv1(x, edge_index)
         x = x.relu()
         x = self.conv2(x, edge_index)
@@ -204,9 +224,11 @@ class CustomGNNLightning(pl.LightningModule):
 
         # pdb.set_trace()
         # 2. Readout layer
-        # x = torch_geometric.nn.global_mean_pool(
-        #     x, batch
-        # )  # [batch_size, hidden_channels]
+        # batch = torch.zeros(x.size(0), dtype=torch.long).to(batch.device)
+        x = torch_geometric.nn.global_mean_pool(
+            x, batch
+        )  # [batch_size, hidden_channels]
+        # x = torch_geometric.nn.pool.global_mean_pool(x,batch)
 
         # 3. Apply a final classifier
         x = F.dropout(x, p=0.5, training=self.training)
@@ -217,12 +239,14 @@ class CustomGNNLightning(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         y_hat = self(batch)
+        # pdb.set_trace()
         loss = self.loss_fn(y_hat, batch.y)
         self.log("train_loss", loss, prog_bar=True, batch_size=batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
         y_hat = self(batch)
+        # pdb.set_trace()
         loss = self.loss_fn(y_hat, batch.y)
 
         y_hat = F.softmax(y_hat, dim=1)
@@ -244,7 +268,7 @@ class CustomGNNLightning(pl.LightningModule):
         # precision = self.precision(predictions, target)
         # recall = self.recall(predictions, target)
         # f1 = self.f1(predictions, target)
-        
+
         # self.log("val_accuracy", accuracy, prog_bar=True, logger=True, batch_size=2048)
         # self.log("val_precision", precision, prog_bar=True, logger=True, batch_size=2048)
         # self.log("val_recall", recall, prog_bar=True, logger=True, batch_size=2048)
@@ -271,7 +295,7 @@ class CustomGNNLightning(pl.LightningModule):
         return accuracy, precision, recall, f1
 
     def configure_optimizers(self):
-        optimizer = optim.AdamW(self.parameters(), lr=0.005)
+        optimizer = optim.AdamW(self.parameters(), lr=0.001)
         return optimizer
 
 
@@ -281,22 +305,29 @@ if __name__ == "__main__":
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=0,
-        collate_fn=custom_collate,
+        # num_workers=0,
+        # collate_fn=custom_collate,
     )
     val_dataset = CustomDataset(is_train=False)
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=0,
-        collate_fn=custom_collate,
+        # num_workers=0,
+        # collate_fn=custom_collate,
     )
+    # for step, data in enumerate(train_loader):
+    #     print(f'Step {step + 1}:')
+    #     print('=======')
+    #     print(f'Number of graphs in the current batch: {data.num_graphs}')
+    #     print(data)
+    #     print()
+    # exit()
 
     model = CustomGNNLightning()
     from lightning.pytorch.loggers import TensorBoardLogger
 
     logger = TensorBoardLogger("tb_logs", name="gcn")
-    trainer = pl.Trainer(max_epochs=10, logger=True)
+    trainer = pl.Trainer(max_epochs=200, logger=True)
 
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
