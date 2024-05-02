@@ -1,7 +1,7 @@
-transformers
-trl
-peft
-accelerate
+transformers==4.40.0
+trl==0.8.6
+peft==0.10.0
+accelerate==0.29.3
 datasets
 bitsandbytes
 scipy

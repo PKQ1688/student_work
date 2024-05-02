@@ -1,2 +1,5 @@
 lightning
 torch_geometric
+torch
+pandas
+tensorboardX
