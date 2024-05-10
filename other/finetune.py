@@ -32,7 +32,7 @@ dataset = dataset.map(prepare_example, remove_columns=['filename'])
 # Cast the 'speech' column to the Audio feature type
 dataset = dataset.cast_column('speech', Audio())
 
-processor = Wav2Vec2Processor.from_pretrained(' ')
+processor = Wav2Vec2Processor.from_pretrained('facebook/wav2vec2-large-960h-lv60-self')
 model = Wav2Vec2ForCTC.from_pretrained('facebook/wav2vec2-large-960h-lv60-self')
 
 
