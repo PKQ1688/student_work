@@ -7,7 +7,7 @@ from trl import DPOTrainer
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from utils import find_all_linear_names, print_trainable_parameters
 
-output_dir="./dpo_results"
+output_dir="dpo_results"
 model_name = "merged_peft/final_merged_checkpoint"
 
 dataset = load_dataset("json", data_files="dpo_conversations.json",split="train")
