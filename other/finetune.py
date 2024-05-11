@@ -12,8 +12,15 @@ from typing import Dict, List, Optional, Union
 import librosa
 import torch
 from datasets import load_dataset
-from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Processor,Wav2Vec2ForCTC,TrainingArguments,Trainer
+from transformers import (
+    Wav2Vec2FeatureExtractor,
+    Wav2Vec2Processor,
+    Wav2Vec2ForCTC,
+    TrainingArguments,
+    Trainer,
+)
 
+model_path = "facebook/wav2vec2-large-960h-lv60-self"
 # from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, TrainingArguments, Trainer
 
 # Load the dataset from the CSV file
@@ -41,7 +48,7 @@ feature_extractor = Wav2Vec2FeatureExtractor(
 
 
 # processor = Wav2Vec2Processor(feature_extractor, tokenizer=None)
-processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-large-960h-lv60-self")
+processor = Wav2Vec2Processor.from_pretrained(model_path)
 
 
 # model = AutoModelForCTC.from_pretrained('facebook/wav2vec2-large-960h-lv60-self')
@@ -95,10 +102,14 @@ class DataCollatorCTCWithPadding:
     pad_to_multiple_of: Optional[int] = None
     pad_to_multiple_of_labels: Optional[int] = None
 
-    def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+    def __call__(
+        self, features: List[Dict[str, Union[List[int], torch.Tensor]]]
+    ) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need
         # different padding methods
-        input_features = [{"input_values": feature["input_values"]} for feature in features]
+        input_features = [
+            {"input_values": feature["input_values"]} for feature in features
+        ]
         label_features = [{"input_ids": feature["labels"]} for feature in features]
 
         batch = self.processor.pad(
@@ -118,36 +129,39 @@ class DataCollatorCTCWithPadding:
             )
 
         # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+        labels = labels_batch["input_ids"].masked_fill(
+            labels_batch.attention_mask.ne(1), -100
+        )
 
         batch["labels"] = labels
 
         return batch
 
+
 data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 # wer_metric = load_metric("wer")
 model = Wav2Vec2ForCTC.from_pretrained(
-    "facebook/wav2vec2-large-960h-lv60-self",
+    model_path,
     ctc_loss_reduction="mean",
     # pad_token_id=processor.tokenizer.pad_token_id,
 )
 model.freeze_feature_extractor()
 
 training_args = TrainingArguments(
-  output_dir="result",
-  group_by_length=True,
-  per_device_train_batch_size=32,
-  evaluation_strategy="steps",
-  num_train_epochs=30,
-  fp16=True,
-  gradient_checkpointing=True,
-  save_steps=500,
-  eval_steps=500,
-  logging_steps=500,
-  learning_rate=1e-4,
-  weight_decay=0.005,
-  warmup_steps=1000,
-  save_total_limit=2,
+    output_dir="result",
+    group_by_length=True,
+    per_device_train_batch_size=32,
+    evaluation_strategy="steps",
+    num_train_epochs=30,
+    fp16=True,
+    gradient_checkpointing=True,
+    save_steps=500,
+    eval_steps=500,
+    logging_steps=500,
+    learning_rate=1e-4,
+    weight_decay=0.005,
+    warmup_steps=1000,
+    save_total_limit=2,
 )
 
 trainer = Trainer(
