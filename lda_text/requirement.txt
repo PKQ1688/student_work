@@ -1,0 +1,5 @@
+pymupdf
+nltk
+gensim
+wordcloud
+jieba
